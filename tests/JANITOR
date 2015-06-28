@@ -1,0 +1,10 @@
+[versioner]
+minor_max = 99
+
+[tagger]
+words = + hello, world
+
+[prefixer]
+tag   = note
+align = center
+width = 79
