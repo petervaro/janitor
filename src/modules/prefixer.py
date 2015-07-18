@@ -10,4 +10,4 @@ class Prefixer:
     ALIGN_LEFT    = 'left'
     ALIGN_CENTER  = 'center'
     ALIGN_RIGHT   = 'right'
-    BLOCK         = 'Version: {VERSION}\nFile: {FILE}\n'
+    BLOCK         = 'File: {FILE}\n'

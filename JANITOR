@@ -1,0 +1,13 @@
+{
+    "exclude":
+    {
+        "names":
+        [
+            "README.html"
+        ],
+        "extend_default":
+        [
+            "names"
+        ]
+    }
+}

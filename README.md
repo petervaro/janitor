@@ -70,77 +70,38 @@ Janitor(path    = '/tmp',
 The `JANITOR` configuration file
 --------------------------------
 
-Basically `JANITOR` is just a "fancy" `INI` file, with some special features
-and syntax aditions. For example some values require sequences (sets or lists),
-while some requires mapping types. `JANITOR` uses a simplified syntax similar
-to the `python` syntax of these types.
+The `JANITOR` file is a `json` file, where the root object has to be a type of
+`Object`. There can be one *global* preference, called `exclude` and several
+module preferences, like `versioner` or `prefixer`.
 
-There is the sequence type:
+Everything has a default value, so you only have to specify, what you want to
+overwrite. In some cases (mostly when a container is needed) the desired
+behaviour should be extending the default values, not overwrite them. `JANITOR`
+can handle these situations, by providing an `extend_default` key, in ever
+`module` and the global preferences. For example, if you want to `exclude` the
+files `"hello.x"` and `"world.y"` and you also want to exclude the files
+excluded by default (`[".gitignore", ".DS_Store"]`), then you have to type in:
 
-```
-key_string = value, 1, True, 123.456
-```
-
-And there is the mapping type:
-
-```
-key_sting = alpha: 0, beta: 1, gamma: 2, delta: 3
-```
-
-Because these literals are using special characters (like: '`,`' or '`:`') the
-syntax also provides escape sequences of these characters. For example this:
-
-```
-key_string = hello\, world, hey\, there!
-```
-
-is equal to:
-
-```
-["hello, world", "hey, there!"]
-```
-
-Or this:
-
-```
-key_string = your name\: Clara: yes, your name\: Donna: no
-```
-
-is equal to this:
-
-```
-{"your name: Clara": "yes", "your name: Donna": "no"}
-```
-
-And the syntax also supports the escaping from the escape character as well:
-
-```
-key_string = escape: \\, comma: \,
-```
-
-is equal to:
-
-```
-{"escape": "\\", "comma": ","}
-```
-
-Some of these containers holds predefined values, which are correct, but we need
-to extend those values with additional ones. `JANITOR`'s syntax also provides a
-sugar for that, the first non-whitespace character has to be a `+`. For example,
-if the default values of '`world`' are '`hello`' and '`good bye`', using this:
-
-```
-world = + hi, bye
-```
-
-is equal to:
-
-```
-["hello", "good bye", "hi", "bye"]
+```json
+{
+    "exclude":
+    {
+        "names":
+        [
+            "hello.x",
+            "world.y"
+        ],
+        "extend_default":
+        [
+            "names"
+        ]
+    }
+}
 ```
 
 
 Known issues
 ------------
 
-Microsoft Windows is not supported at the moment.
+Currently there is no support for Microsoft Windows and the future of the
+support is unknown at this moment.

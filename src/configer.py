@@ -3,66 +3,71 @@
 
 # Import python modules
 from os.path           import join
+from copy              import deepcopy
 from collections       import OrderedDict
-from configparser      import ConfigParser
+# TODO: Change ValueErrors in the __init__ method to
+#       JSONDecodeError, when Python 3.5 will be released
+from json              import load, dump#, JSONDecodeError
 
 # Import janitor modules
 from modules.tagger    import Tagger
 from modules.prefixer  import Prefixer
 from modules.versioner import Versioner
-from configer_types    import Bool, Int, Str, Set, List, Dict, OrdDict
+from orderedset        import OrderedSet
 
 
 
 #------------------------------------------------------------------------------#
 # Module level constants
-_DEFAULT = OrderedDict(
+_EXTEND_DEFAULT = 'extend_default'
+_EXTENDERS      = 'update', 'extend'
+_DEFAULT        = OrderedDict(
 [
-    ('black_list', OrderedDict(
+    ('exclude', OrderedDict(
     [
-        ('names'             , Set(extensible=True,
-                                   default={'.gitignore', '.DS_Store'})),
-        ('folders'           , Set(extensible=True,
-                                   default={'.janitor', '.git', '__pycache__'})),
-        ('extensions'        , Set(extensible=True,
-                                   default={'a', 'o', 'os', 'so', 'dylib',
-                                            'dll', 'exe', 'pyc', 'pyo', 'jpg',
-                                            'jpeg', 'png', 'gif', 'pdf'})),
+        # TODO: `names` should `files` instead for clearity
+        ('names'             , (OrderedSet, OrderedSet(('.gitignore',
+                                                        '.DS_Store',
+                                                        'JANITOR')))),
+        ('folders'           , (OrderedSet, OrderedSet(('.janitor',
+                                                        '.git',
+                                                        '__pycache__')))),
+        ('extensions'        , (OrderedSet, OrderedSet(('a', 'o', 'os', 'so',
+                                                        'dylib', 'dll', 'exe',
+                                                        'pyc', 'pyo', 'jpg',
+                                                        'jpeg', 'png', 'gif',
+                                                        'pdf')))),
     ])),
 
     ('versioner', OrderedDict(
     [
-        ('use'               , Bool(default=True)),
-        ('major_max'         , Int(default=Versioner.MAJOR_MAX)),
-        ('major_base'        , Int(default=Versioner.MAJOR_BASE)),
-        ('minor_max'         , Int(default=Versioner.MINOR_MAX)),
-        ('minor_base'        , Int(default=Versioner.MINOR_BASE)),
-        ('maintenance_max'   , Int(default=Versioner.MAINTENANCE_MAX)),
-        ('maintenance_base'  , Int(default=Versioner.MAINTENANCE_BASE)),
-        ('build_max'         , Int(default=Versioner.BUILD_MAX)),
-        ('build_base'        , Int(default=Versioner.BUILD_BASE)),
+        ('use'               , (bool, True)),
+        ('major_max'         , (int, Versioner.MAJOR_MAX)),
+        ('major_base'        , (int, Versioner.MAJOR_BASE)),
+        ('minor_max'         , (int, Versioner.MINOR_MAX)),
+        ('minor_base'        , (int, Versioner.MINOR_BASE)),
+        ('maintenance_max'   , (int, Versioner.MAINTENANCE_MAX)),
+        ('maintenance_base'  , (int, Versioner.MAINTENANCE_BASE)),
+        ('build_max'         , (int, Versioner.BUILD_MAX)),
+        ('build_base'        , (int, Versioner.BUILD_BASE)),
     ])),
 
     ('tagger', OrderedDict(
     [
-        ('use'               , Bool(default=True)),
-        ('exclude_names'     , Set(extensible=True, default=set())),
-        ('exclude_folders'   , Set(extensible=True, default=set())),
-        ('exclude_extensions', Set(extensible=True, default=set())),
-        ('words'             , List(extensible=True, default=Tagger.WORDS)),
-        ('marks'             , OrdDict(extensible=True, default=Tagger.MARKS)),
+        ('use'               , (bool, True)),
+        ('exclude'           , (OrderedDict, OrderedDict())),
+        ('words'             , (OrderedSet, Tagger.WORDS)),
+        ('marks'             , (OrderedDict, Tagger.MARKS)),
     ])),
 
     ('prefixer', OrderedDict(
     [
-        ('use'               , Bool(default=True)),
-        ('exclude_names'     , Set(extensible=True, default=set())),
-        ('exclude_folders'   , Set(extensible=True, default=set())),
-        ('exclude_extensions', Set(extensible=True, default=set())),
-        ('tag'               , Str(default=Prefixer.TAG)),
-        ('align'             , Str(default=Prefixer.ALIGN_LEFT)),
-        ('width'             , Int(default=Prefixer.WIDTH)),
-        ('block'             , Str(default=Prefixer.BLOCK)),
+        ('use'               , (bool, True)),
+        ('exclude'           , (OrderedDict, OrderedDict())),
+        ('tag'               , (str, Prefixer.TAG)),
+        ('align'             , (str, Prefixer.ALIGN_LEFT)),
+        ('width'             , (int, Prefixer.WIDTH)),
+        ('block'             , (int, Prefixer.BLOCK)),
     ])),
 ])
 
@@ -76,72 +81,90 @@ class Configer:
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
     class InvalidConfigFilePath(Exception): pass
-    class UnsupportedTypeForExtension(Exception): pass
+    class InvalidConfigFileFormat(Exception): pass
+    class InvalidExtendDefaultOption(Exception): pass
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
     @classmethod
     def from_default(cls, **kwargs):
-        config = ConfigParser()
-        for section, options in _DEFAULT.items():
-            config.add_section(section)
-            section = config[section]
-            for key, value in options.items():
-                section[key] = value.raw_data
-        # Create new instance
-        return cls(config=config, **kwargs)
+        return cls(config=deepcopy(_DEFAULT), **kwargs)
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
     def __init__(self, config=None,
                        config_dir_path=None,
                        config_file_path=None):
-        # If file path manually specified
-        if config_file_path:
+        # If custom file-path and file-name specified
+        if config_file_path is not None:
             self._file_path = config_file_path
-        # If file path is the default one
-        elif config_dir_path:
+        # If custom file-path, but default file-name specified
+        elif config_dir_path is not None:
             self._file_path = join(config_dir_path, Configer.FILE_NAME)
-        # If there is not file path and no config object passed
-        elif not config:
-            raise InvalidConfigFilePath
+        # If no file-path specified AND not even
+        # an already processed configuration passed
+        elif config is None:
+            raise Configer.InvalidConfigFilePath
 
         # If no config object passed
-        if not config:
-            # Create config object
-            config = ConfigParser()
+        if config is None:
             # If config file exists
             try:
                 with open(self._file_path, mode='r') as file:
-                    config.read_file(file)
+                    config = load(file, object_pairs_hook=OrderedDict)
+            # If config file is invalid
+            except ValueError as e:
+                raise Configer.InvalidConfigFileFormat(str(e))
             # If no config file found
             except FileNotFoundError:
-                pass
+                config = OrderedDict()
 
-        # Store config object as a simple dictionary
-        self._conf = OrderedDict((s, OrderedDict(**o))
-                                 for s, o in config.items() if s != 'DEFAULT')
+        # Store config object
+        self._conf = config
 
         # Go through all sections
-        for section, def_section in _DEFAULT.items():
+        for section_name, section_defaults in _DEFAULT.items():
             # If section is defined by the user
             try:
-                usr_section = self._conf[section]
+                section_user = self._conf[section_name]
             # If section is missing from user's config
             except KeyError:
-                # Use default options
-                self._conf[section] = {k:v for k,v in def_section.items()}
+                self._conf[section_name] = \
+                    OrderedDict((k, v) for k, (t, v) in section_defaults.items())
                 continue
 
+            # Get/set extend_default option
+            extend_default = set(section_user.get(_EXTEND_DEFAULT, ()))
+
             # Go through all options
-            for key, data_type in def_section.items():
+            for option, (type_cast, default) in section_defaults.items():
                 # If value is defined by the user
                 try:
-                    usr_section[key] = data_type(raw_data=usr_section[key])
+                    defined = type_cast(section_user[option])
+                    #print(defined)
+                    # If option should extend the default values
+                    if (option in extend_default):
+                        default = deepcopy(default)
+                        # Try to extend cloned defaults
+                        for method_name in _EXTENDERS:
+                            try:
+                                getattr(default, method_name)(defined)
+                                break
+                            except AttributeError:
+                                continue
+                        # If cloned default cannot be extended
+                        else:
+                            raise Configer.InvalidExtendDefaultOption
+                        # Store extended defaults
+                        raise KeyError
+                    # Store casted user defined value
+                    section_user[option] = defined
                 # If value is not defined by the user
                 except KeyError:
-                    usr_section[key] = data_type
-                    continue
+                    section_user[option] = default
+                # Value cannot be casted to the proper type
+                except ValueError as e:
+                    raise Configer.InvalidConfigFileFormat(str(e))
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
@@ -150,12 +173,8 @@ class Configer:
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #
-    def __getitem__(self, key):
-        try:
-            section, option, *_ = key
-            return self._conf[section][option].data
-        except ValueError:
-            return {k: v.data for k, v in self._conf[section].items()}
+    def __getitem__(self, section):
+        return self._conf[section]
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - #

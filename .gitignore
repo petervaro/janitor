@@ -7,5 +7,6 @@
 *.o
 
 .sconsign.dblite
+.janitor/checksum
 
 README.html

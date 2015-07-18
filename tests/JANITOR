@@ -1,10 +1,38 @@
-[versioner]
-minor_max = 99
-
-[tagger]
-words = + hello, world
-
-[prefixer]
-tag   = note
-align = center
-width = 79
+{
+    "exclude":
+    {
+        "names":
+        [
+            "janitor.py",
+        ],
+        "extend_default":
+        [
+            "names"
+        ]
+    },
+    "prefixer":
+    {
+        "minor_max": 99
+    },
+    "tagger":
+    {
+        "words": ["hello", "world"],
+        "extend_default":
+        [
+            "words"
+        ]
+    },
+    "prefixer":
+    {
+        "tag"     : "note",
+        "align"   : "center",
+        "width"   : 79,
+        "exclude" :
+        {
+            "names":
+            [
+                "spam"
+            ]
+        }
+    }
+}

@@ -4,6 +4,8 @@
 # Import python modules
 from os.path import join
 
+# TODO: Support more than one version format in the future
+
 #------------------------------------------------------------------------------#
 class Versioner:
 
